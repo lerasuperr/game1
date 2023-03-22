@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-
 using TMPro;
 using UnityEngine;
 
@@ -20,7 +19,7 @@ public sealed class ScoreCounter : MonoBehaviour
 
             score = value;
 
-            scoreText.SetText($"Score = {score}");
+            scoreText.SetText($"Количество очков:\n {score}");
         }
     }
 

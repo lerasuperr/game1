@@ -12,6 +12,10 @@ using UnityEditor.ShaderGraph;
 using UnityEngine;
 using UnityEngine.Analytics;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using static UnityEditor.Experimental.GraphView.GraphView;
+using Unity.VisualScripting.Dependencies.Sqlite;
+using TMPro;
 
 public sealed class Board : MonoBehaviour
 {
@@ -27,14 +31,30 @@ public sealed class Board : MonoBehaviour
     public int Widht => Tiles.GetLength(0);
     public int Height => Tiles.GetLength(1);
 
-    private readonly List<Tile> selection = new List<Tile>();
+    private void Awake() => Instance = this;
 
+    private readonly List<Tile> selection = new List<Tile>();
     private const float TweenDuration = 0.4f;
 
-    private void Awake() => Instance = this;
+    public GameObject Form;
+    public Button button;
+
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI NameText;
+
+    public int MaxScore = 0;
+    public string Players;
+    public static string NamePlayer;
+    
 
     private void Start()
     {
+        if (PlayerPrefs.HasKey("MaxScore"))
+            MaxScore = PlayerPrefs.GetInt("MaxScore", MaxScore);
+       
+        if (PlayerPrefs.HasKey("Players"))
+            Players = PlayerPrefs.GetString("Players", Players);
+
         CreateBoard();
 
         if (CanPop()) Pop0();
@@ -79,7 +99,7 @@ public sealed class Board : MonoBehaviour
                 var tile = Tiles[x, y];
 
                 var sequence = DOTween.Sequence();
-                sequence.Append(Tiles[x, y].icon.transform.DOScale(Vector3.zero, 0.15f));
+                sequence.Append(Tiles[x, y].icon.transform.DOScale(Vector3.zero, 0.1f));
 
                 await sequence.Play().AsyncWaitForCompletion();
             }
@@ -96,7 +116,7 @@ public sealed class Board : MonoBehaviour
 
                 var sequence = DOTween.Sequence();
 
-                sequence.Append(Tiles[x, y].icon.transform.DOScale(Vector3.one, 0.15f));
+                sequence.Append(Tiles[x, y].icon.transform.DOScale(Vector3.one, 0.1f));
 
                 await sequence.Play().AsyncWaitForCompletion();
             }
@@ -121,7 +141,7 @@ public sealed class Board : MonoBehaviour
         if (selection.Count < 2) return;
         if (selection.Count > 2) selection.Clear();
 
-        Debug.Log($"Selected tiles at ({selection[0].x},{selection[0].y}) and ({selection[1].x},{selection[1].y})");
+        Debug.Log($"Выбранные плитки ({selection[0].x},{selection[0].y}) and ({selection[1].x},{selection[1].y})");
 
         await Swap(selection[0], selection[1]);
 
@@ -157,8 +177,31 @@ public sealed class Board : MonoBehaviour
         if (ImageTimer.Instance.timerImage.fillAmount == 0)
         {
             Debug.Log("Время вышло!");
+
             ImageTimer.Instance.timerImage.fillAmount = 1;
+
+            Form.SetActive(true);
+            NameText.GetComponent<TextMeshProUGUI>();
+
+            scoreText.SetText($"Ваше количество очков: {ScoreCounter.Instance.Score}");
         }
+    }
+
+    public void SaveScore()
+    {
+        if (ScoreCounter.Instance.Score > MaxScore)
+        {
+            MaxScore = ScoreCounter.Instance.Score;
+            PlayerPrefs.SetInt("MaxScore", MaxScore);
+        }
+        
+        NamePlayer = NameText.text.ToString() + " - ";
+
+        Players = Players + NamePlayer + ScoreCounter.Instance.Score + " \n";
+
+        PlayerPrefs.SetString("Players", Players);
+
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
     }
 
     public async Task Swap(Tile tile1, Tile tile2)
@@ -525,11 +568,7 @@ public sealed class Board : MonoBehaviour
                 var tile = Tiles[x, y];
 
                 if (tile.flag == false)
-                {
-                    Debug.Log($"Tiles at ({x},{y}) is empty");
-
                     TilesEmpty.Add(tile);
-                }
             }
         }
 
@@ -589,5 +628,6 @@ public sealed class Board : MonoBehaviour
 
         }
     }
-    
+
+   
 }
